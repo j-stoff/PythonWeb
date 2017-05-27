@@ -1,0 +1,5 @@
+#This is a mock property file saved as a text file
+# The parser will look at the first character in each line to determine if this a comment or not
+# As of now there will be no way to do long block comments
+
+test=bananas
