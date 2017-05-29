@@ -7,7 +7,6 @@
 
 import tarfile
 import os
-from pathlib import Path
 
 """
     Will read frrom a property file.
@@ -52,36 +51,72 @@ def readPropertyFile():
 
 """
     Check input from the property file.
-        Files saved must exist
-        File origin directory must exist
-        File destination direcory must exist, if not can be created
+        Files saved must exist.
+        File origin directory must exist.
+        File destination direcory should exist, if not it will be created.
         File output if exists must be deleted, if not no action taken.
 """
 def checkNeededInputs():
-    file_name = property_map['file_name']
-    file_location = property_map['file_location']
+    origin_file_name = property_map['tar_target']
+    origin_file_location = property_map['file_location']
     file_destination = property_map['file_destination']
     file_output_name = property_map['file_output_name']
 
+    origin_directory_test = os.path.isdir(origin_file_location)
+    origin_target_test = os.path.exists(origin_file_location + origin_file_name)
 
-    origin_test = Path.is_dir(file_location)
+    if not origin_directory_test:
+        return "The origin directory does not exist"
+    elif not origin_target_test:
+        return "The file does not exist"
 
-    print(origin_test)
+
+    destination_directory_test = os.path.isdir(file_destination)
+
+    if not destination_directory_test:
+        os.makedirs(file_destination)
+        print("Folder made for backup file...")
+
+
+    #### Still need to test if file exists ####
+
+
+    target_name = file_output_name + ".tar.gz"
+    output_file_exists_test = os.path.isfile(file_destination + target_name)
+
+    if output_file_exists_test:        
+        tar_file_test = tarfile.is_tarfile(file_destination + target_name)
+
+        if tar_file_test:
+            ##Delete the file
+            
+
+            os.remove(file_destination + target_name)
+
+            print("Original file deleted")
+
 
     return "All files properly made"
 
 
 
-
-"""
-    Will find if a file with the same output name exists in the directory
-    and if so will delete it.
-
-"""
-
-
 """
     Tar the file and save it to the output directory
 """
-readPropertyFile()
-print(checkNeededInputs())
+def tarFileToDirectory():
+    origin_file_name = property_map['tar_target']
+    origin_file_location = property_map['file_location']
+    file_destination = property_map['file_destination']
+    file_output_name = property_map['file_output_name']
+    target_name = file_output_name + ".tar.gz"
+
+    with tarfile.open((file_destination + target_name), mode='w') as out:
+        print("Taring file...")
+        out.add(origin_file_location + origin_file_name)
+
+def run():
+    readPropertyFile()
+    print(checkNeededInputs())
+    tarFileToDirectory()
+
+run()
