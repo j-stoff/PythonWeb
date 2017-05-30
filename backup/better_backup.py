@@ -38,6 +38,13 @@ line_separator = os.linesep
 property_map = {}
 list_of_keys = []
 
+def determineTarget(tar_target, tar_directory):
+    if tar_target == tar_directory:
+        return tar_target
+    else:
+        return tar_directory + tar_target
+
+
 def readPropertyFile():
     with open("backup.properties") as properties:
         for line in properties:
@@ -57,43 +64,46 @@ def readPropertyFile():
         File output if exists must be deleted, if not no action taken.
 """
 def checkNeededInputs():
-    origin_file_name = property_map['tar_target']
-    origin_file_location = property_map['file_location']
-    file_destination = property_map['file_destination']
-    file_output_name = property_map['file_output_name']
+    origin_target = property_map['tar_target']
+    origin_target_location = property_map['file_location']
+    target_destination = property_map['file_destination']
+    target_output_name = property_map['file_output_name']
 
-    origin_directory_test = os.path.isdir(origin_file_location)
-    origin_target_test = os.path.exists(origin_file_location + origin_file_name)
+    origin_directory_test = os.path.isdir(origin_target_location)
 
     if not origin_directory_test:
         return "The origin directory does not exist"
-    elif not origin_target_test:
-        return "The file does not exist"
+
+    tar_target_path = determineTarget(origin_target, origin_target_location)
+
+    origin_target_test = os.path.exists(tar_target_path)
+
+    if not origin_target_test:
+        return "The target for tarring does not exist"
 
 
-    destination_directory_test = os.path.isdir(file_destination)
+
+
+    destination_directory_test = os.path.isdir(target_destination)
 
     if not destination_directory_test:
-        os.makedirs(file_destination)
+        os.makedirs(target_destination)
         print("Folder made for backup file...")
 
 
-    #### Still need to test if file exists ####
-
-
-    target_name = file_output_name + ".tar.gz"
-    output_file_exists_test = os.path.isfile(file_destination + target_name)
+    #target_name = file_output_name + ".tar.gz"
+    output_file_exists_test = os.path.exists(target_destination + target_output_name)
 
     if output_file_exists_test:        
-        tar_file_test = tarfile.is_tarfile(file_destination + target_name)
+        tar_file_test = tarfile.is_tarfile(target_destination + target_output_name)
 
         if tar_file_test:
             ##Delete the file
-            
-
-            os.remove(file_destination + target_name)
+            os.remove(target_destination + target_output_name)
 
             print("Original file deleted")
+        else:
+            print("Output file was not a tar file")
 
 
     return "All files properly made"
@@ -104,19 +114,24 @@ def checkNeededInputs():
     Tar the file and save it to the output directory
 """
 def tarFileToDirectory():
-    origin_file_name = property_map['tar_target']
-    origin_file_location = property_map['file_location']
-    file_destination = property_map['file_destination']
-    file_output_name = property_map['file_output_name']
-    target_name = file_output_name + ".tar.gz"
+    origin_target = property_map['tar_target']
+    origin_target_location = property_map['file_location']
+    target_destination = property_map['file_destination']
+    target_output_name = property_map['file_output_name']
 
-    with tarfile.open((file_destination + target_name), mode='w') as out:
-        print("Taring file...")
-        out.add(origin_file_location + origin_file_name)
+    tar_target_path = determineTarget(origin_target, origin_target_location)
 
-def run():
+    relative_target_path = os.path.relpath(tar_target_path,"/home/jake-python/")
+
+    with tarfile.open((target_destination + target_output_name), mode='w:gz') as tar:
+        tar.add(tar_target_path, arcname=os.path.basename(relative_target_path))
+
+
+
+def runBackup():
     readPropertyFile()
     print(checkNeededInputs())
     tarFileToDirectory()
+    print("End of backup")
 
-run()
+runBackup()
