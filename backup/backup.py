@@ -38,11 +38,47 @@ line_separator = os.linesep
 property_map = {}
 list_of_keys = []
 
-def determineTarget(tar_target, tar_directory):
-    if tar_target == tar_directory:
+"""
+    Function is designed to take in a value from a properties file and remove the trailing separator found at the end of the file.
+
+    For example, the '\n' will appear on file IO in such a file and should not be part of the actual input.
+
+
+    value:
+        The value to be stripped of trailing line separator
+
+"""
+def removeTrailingSeparator(value):
+    line_separator = os.linesep
+
+    if isinstance(value, str):
+        return value.strip(line_separator)
+
+    
+    if isinstance(value, list):
+        value[-1] = value[-1].strip(line_separator)
+
+        return value
+
+
+
+"""
+    Function for determining the target path based on the inputs.
+    If the target and direcfory are the same, then the entire output is only to be the target.
+    If not, then the directory is concatenated with the target for a specific file.
+
+    tar_target:
+        The target of the calling function.
+
+    target_directory:
+        The current directory the target resides in
+"""
+
+def determineTarget(tar_target, target_directory):
+    if tar_target == target_directory:
         return tar_target
     else:
-        return tar_directory + tar_target
+        return target_directory + tar_target
 
 
 def readPropertyFile():
@@ -50,8 +86,27 @@ def readPropertyFile():
         for line in properties:
             if line[0] != '#' and line != line_separator:
                 line = line.split('=')
-                property_map[line[0]] = line[1].strip(line_separator)
+
+                value = line[1]
+
+                if ',' in value:
+                    value = value.split(',')
+                    list_of_values = []
+
+                    value = removeTrailingSeparator(value)
+
+                    property_map[line[0]] = value
+
+                else:
+                    value = removeTrailingSeparator(value)
+                    property_map[line[0]] = value
+
+
                 list_of_keys.append(line[0])
+
+                print(value)
+
+    print("File read")
 
 
 """
@@ -63,16 +118,16 @@ def readPropertyFile():
 """
 def checkNeededInputs():
     origin_target = property_map['tar_target']
-    origin_target_location = property_map['file_location']
-    target_destination = property_map['file_destination']
+    origin_target_locations = property_map['file_location']
+    target_destination = property_map['file_destinations']
     target_output_name = property_map['file_output_name']
 
-    origin_directory_test = os.path.isdir(origin_target_location)
+    origin_directory_test = os.path.isdir(origin_target_locations)
 
     if not origin_directory_test:
         return "The origin directory does not exist"
 
-    tar_target_path = determineTarget(origin_target, origin_target_location)
+    tar_target_path = determineTarget(origin_target, origin_target_locations)
 
     origin_target_test = os.path.exists(tar_target_path)
 
@@ -80,14 +135,16 @@ def checkNeededInputs():
         return "The target for tarring does not exist"
 
 
-
+    ##if len(target_destination) is 1, preform the normal operation
 
     destination_directory_test = os.path.isdir(target_destination)
 
     if not destination_directory_test:
         os.makedirs(target_destination)
-        print("Folder was created for the backup file...")
+        print("Folder made for backup file...")
 
+
+    ##else, loop through each item and check that each directory exists, if not create it
 
     #target_name = file_output_name + ".tar.gz"
     output_file_exists_test = os.path.exists(target_destination + target_output_name)
@@ -101,7 +158,7 @@ def checkNeededInputs():
 
             print("Original file deleted")
         else:
-            return "Output file was not a tar file"
+            print("Output file was not a tar file")
 
 
     return "All files properly made"
@@ -110,22 +167,18 @@ def checkNeededInputs():
 
 """
     Tar the file and save it to the output directory
-
-    Determines the canonical path to the target file and
-    a relative path to the target file.
-
-    The relative path is used to remove the excess directory structure or a full
-    recursive copy of the target is made.
 """
 def tarFileToDirectory():
     origin_target = property_map['tar_target']
-    origin_target_location = property_map['file_location']
-    target_destination = property_map['file_destination']
+    origin_target_locations = property_map['file_location']
+    target_destination = property_map['file_destinations']
     target_output_name = property_map['file_output_name']
 
-    tar_target_path = determineTarget(origin_target, origin_target_location)
+    tar_target_path = determineTarget(origin_target, origin_target_locations)
 
     relative_target_path = os.path.relpath(tar_target_path,"/home/jake-python/")
+
+    #Add for in loop with all target destinations
 
     with tarfile.open((target_destination + target_output_name), mode='w:gz') as tar:
         tar.add(tar_target_path, arcname=os.path.basename(relative_target_path))
@@ -134,8 +187,8 @@ def tarFileToDirectory():
 
 def runBackup():
     readPropertyFile()
-    print(checkNeededInputs())
-    tarFileToDirectory()
-    print("End of backup")
+    #print(checkNeededInputs())
+    #tarFileToDirectory()
+    #print("End of backup")
 
 runBackup()
