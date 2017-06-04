@@ -81,6 +81,12 @@ def determineTarget(tar_target, target_directory):
         return target_directory + tar_target
 
 
+"""
+    Reads in a 'property' file that ignores lines that begin with a # and and splits the lines into key value pairs on either 
+    side of a '='
+
+"""
+
 def readPropertyFile():
     with open("backup.properties") as properties:
         for line in properties:
@@ -108,6 +114,94 @@ def readPropertyFile():
 
     print("File read")
 
+"""
+    Function to create a directory in order to store the file.
+
+    location:
+        A string that will be taken as a path to create a new directory.
+        The path must be in canonical form.
+"""
+
+def makeDirectoryForBackup(location):
+    os.makedirs(location)
+    print("Created directory to store file. Located in at: " + location)
+
+
+"""
+    This function is designed to test the output directories if they exist or not. By default, the directories will be created
+    if they do not exist already.
+
+    destination:
+        The path to the output directory
+
+    create:
+        If the directories should be made or not.
+        On by default, if a directory is not made the program will not continue.
+"""
+def testDestination(destination, create=True):
+    destination_test = False
+
+    if isinstance(destination, str):
+        destination_test = os.path.isdir(destination)
+
+        if create and not destination_test:
+            #if the create is on and there is no destination
+            makeDirectoryForBackup(destination)
+            return True
+        elif destination_test:
+            #if the destination was found return true
+            return True
+        else:
+            return False
+
+    if isinstance(destination, list):
+        for entry in destination:
+            destination_test = os.path.isdir(entry)
+
+            if create and not destination_test:
+                #if the create is on and there is no destination
+                makeDirectoryForBackup(entry)
+            elif not destination_test:
+                #If no create is on and a destionation was false, stop and return false
+                return False
+
+        return True
+
+"""
+    Test designed to validate if a file with the same name is already in an output directory.
+    If so, the file is deleted and a new one is created.
+
+    destination:
+        The output directory.
+
+    File:
+        The file to be validated if it exists.
+"""
+def testOutputFile(destination, file):
+
+
+    if isinstance(destination, str):
+        output_test = os.path.exists(destination + file)
+
+        tar_file_test = tarfile.is_tarfile(destination + file)
+
+        if output_test and tar_file_test:
+            os.remove(destination + file)
+            print("Old file deleted")
+            return True
+        
+
+
+    if isinstance(destination, list):
+        for entry in destination:
+            output_test = os.path.exists(entry + file)
+
+            tar_file_test = os.path.exists(entry + file)
+
+            if output_test and tar_file_test:
+                os.remove(entry + file)
+                print("Previous file deleted")
+
 
 """
     Check input from the property file.
@@ -119,7 +213,7 @@ def readPropertyFile():
 def checkNeededInputs():
     origin_target = property_map['tar_target']
     origin_target_locations = property_map['file_location']
-    target_destination = property_map['file_destinations']
+    target_destinations = property_map['file_destinations']
     target_output_name = property_map['file_output_name']
 
     origin_directory_test = os.path.isdir(origin_target_locations)
@@ -137,13 +231,19 @@ def checkNeededInputs():
 
     ##if len(target_destination) is 1, preform the normal operation
 
-    destination_directory_test = os.path.isdir(target_destination)
+    target_destination_test = testDestination(target_destinations)
+
+    if not target_destination_test:
+        return "One of the output directories does not exist, please correct this error."
+
+    testOutputFile(target_destinations, target_output_name)
+    """
 
     if not destination_directory_test:
         os.makedirs(target_destination)
         print("Folder made for backup file...")
-
-
+    
+    
     ##else, loop through each item and check that each directory exists, if not create it
 
     #target_name = file_output_name + ".tar.gz"
@@ -159,9 +259,10 @@ def checkNeededInputs():
             print("Original file deleted")
         else:
             print("Output file was not a tar file")
-
+    """
 
     return "All files properly made"
+
 
 
 
@@ -171,7 +272,7 @@ def checkNeededInputs():
 def tarFileToDirectory():
     origin_target = property_map['tar_target']
     origin_target_locations = property_map['file_location']
-    target_destination = property_map['file_destinations']
+    target_destinations = property_map['file_destinations']
     target_output_name = property_map['file_output_name']
 
     tar_target_path = determineTarget(origin_target, origin_target_locations)
@@ -180,15 +281,21 @@ def tarFileToDirectory():
 
     #Add for in loop with all target destinations
 
-    with tarfile.open((target_destination + target_output_name), mode='w:gz') as tar:
-        tar.add(tar_target_path, arcname=os.path.basename(relative_target_path))
+    if isinstance(target_destinations, str):
+        with tarfile.open((target_destinations + target_output_name), mode='w:gz') as tar:
+            tar.add(tar_target_path, arcname=os.path.basename(relative_target_path))
 
+
+    elif isinstance(target_destinations, list):
+        for entry in target_destinations:
+            with tarfile.open((entry + target_output_name), mode="w:gz") as tar:
+                tar.add(tar_target_path, arcname=os.path.basename(relative_target_path))
 
 
 def runBackup():
     readPropertyFile()
-    #print(checkNeededInputs())
-    #tarFileToDirectory()
-    #print("End of backup")
+    print(checkNeededInputs())
+    tarFileToDirectory()
+    print("End of backup")
 
 runBackup()
