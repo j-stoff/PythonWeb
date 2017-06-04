@@ -110,7 +110,7 @@ def readPropertyFile():
 
                 list_of_keys.append(line[0])
 
-                print(value)
+                
 
     print("File read")
 
